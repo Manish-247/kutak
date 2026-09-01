@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kutak Development — Intelligent. Personal.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#141210;
+  --ink-soft:#26221e;
+  --cream:#f4f0e6;
+  --cream-2:#ece7da;
+  --sand:#ddceb4;
+  --sand-2:#e8dcc4;
+  --line:#c9bda4;
+  --text:#2a2622;
+  --muted:#5d564d;
+  --display:"Cormorant Garamond",Georgia,serif;
+  --body:"Jost",system-ui,sans-serif;
+  --rail:96px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--ink);
+  color:var(--text);
+  font-family:var(--body);
+  font-weight:300;
+  font-size:15px;
+  line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+}
+img{max-width:100%;display:block}
+a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+:focus-visible{outline:2px solid var(--sand);outline-offset:3px}
+
+/* ---------- shell ---------- */
+.shell{display:flex;min-height:100vh}
+
+/* ---------- left rail ---------- */
+.rail{
+  width:var(--rail);
+  flex:0 0 var(--rail);
+  background:var(--ink);
+  color:var(--cream);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  padding:26px 0 24px;
+  position:sticky;
+  top:0;
+  height:100vh;
+}
+.mark{display:block;text-align:center}
+.mark .glyph{
+  width:44px;height:44px;margin:0 auto 10px;
+  border:1px solid var(--sand);
+  display:grid;place-items:center;
+  font-family:var(--display);font-size:26px;color:var(--sand-2);
+  letter-spacing:.02em;
+}
+.mark .name{font-family:var(--display);font-size:12px;letter-spacing:.18em;color:var(--cream)}
+.mark .sub{font-size:6.5px;letter-spacing:.3em;color:var(--sand);margin-top:2px}
+
+/* ---- file-folder tabs: manila tabs sticking out of the black rail ---- */
+.rail{overflow:visible}
+.tabs{
+  margin-top:40px;
+  width:100%;
+  position:relative;
+  display:block;
+  height:684px;
+  z-index:5;
+}
+.tab{
+  position:absolute;
+  left:calc(var(--rail) - 36px);      /* tucked under the rail edge */
+  writing-mode:vertical-rl;
+  text-orientation:mixed;
+  transform:rotate(180deg);
+  padding:26px 10px;
+  letter-spacing:.24em;
+  font-size:9px;
+  height:132px;
+  width:34px;
+  color:#6b6154;
+  background:linear-gradient(90deg,#c8b795 0%,#e3d6ba 55%,#d8c9a9 100%);
+  border:1px solid #b9a888;
+  border-left:0;
+  border-radius:0 9px 9px 0;
+  box-shadow:2px 2px 6px rgba(0,0,0,.35), inset -2px 0 4px rgba(0,0,0,.10);
+  transition:transform .3s ease, filter .3s ease, box-shadow .3s ease;
+}
+/* staggered like files in a drawer */
+.tab:nth-of-type(1){top:0}
+.tab:nth-of-type(2){top:138px}
+.tab:nth-of-type(3){top:276px}
+.tab:nth-of-type(4){top:414px}
+.tab:nth-of-type(5){top:552px}
+/* stacking so lower tabs sit behind the ones above */
+.tab:nth-of-type(1){z-index:15}
+.tab:nth-of-type(2){z-index:14}
+.tab:nth-of-type(3){z-index:13}
+.tab:nth-of-type(4){z-index:12}
+.tab:nth-of-type(5){z-index:11}
+
+.tab:hover{transform:rotate(180deg) translateX(-6px);filter:brightness(1.06)}
+.tab[aria-selected="true"]{
+  background:linear-gradient(90deg,#e6dac0 0%,#f2e9d5 60%,#e9dcc0 100%);
+  color:var(--ink);
+  transform:rotate(180deg) translateX(-14px);   /* pulled out of the drawer */
+  z-index:30;
+  box-shadow:4px 3px 12px rgba(0,0,0,.45);
+}
+.rail-foot{margin-top:auto;font-size:7.5px;letter-spacing:.06em;color:#8d8579;line-height:1.9;text-align:left;width:100%;padding-left:12px}
+.rail-foot .pin{color:var(--sand);display:block;font-size:11px;margin-bottom:6px}
+.rail-foot a{color:#8d8579;word-break:break-all}
+.rail-foot .tel{color:var(--cream);font-size:9px;letter-spacing:.08em;margin-top:10px;display:block}
+
+/* ---------- stage ---------- */
+.stage{flex:1;min-width:0;background:var(--cream);display:flex;flex-direction:column}
+.stage{perspective:2200px;perspective-origin:left center;overflow-x:hidden}
+.page{display:none;flex:1;flex-direction:column;transform-origin:left center;backface-visibility:hidden}
+.page.is-on{display:flex}
+
+/* page-turn: outgoing sheet lifts and rotates away, incoming sheet settles down */
+.page.turn-out{
+  display:flex;
+  position:absolute;inset:0;z-index:40;
+  animation:turnOut .52s cubic-bezier(.36,.06,.3,1) forwards;
+  box-shadow:22px 0 46px rgba(0,0,0,.35);
+  background:var(--cream);
+  overflow:hidden;
+}
+.page.turn-in{animation:turnIn .52s cubic-bezier(.2,.7,.3,1) both}
+@keyframes turnOut{
+  0%  {transform:rotateY(0) translateZ(0);opacity:1}
+  100%{transform:rotateY(-72deg) translateZ(40px);opacity:0}
+}
+@keyframes turnIn{
+  0%  {transform:rotateY(26deg) translateZ(-30px);opacity:.25;filter:brightness(.9)}
+  100%{transform:none;opacity:1;filter:none}
+}
+.stage{position:relative}
+@media (prefers-reduced-motion:reduce){
+  .page.turn-out,.page.turn-in{animation:none}
+  .page.turn-out{display:none}
+}
+
+.eyebrow{
+  font-size:9px;letter-spacing:.32em;color:var(--muted);
+  text-align:center;padding:22px 0 0;
+}
+.eyebrow span{color:var(--line);margin:0 10px}
+h1,h2{font-family:var(--display);font-weight:400;margin:0}
+.title{
+  font-size:clamp(30px,4.6vw,54px);letter-spacing:.13em;text-align:center;
+  margin:16px 0 6px;color:var(--ink);
+}
+.title-rule{width:46px;height:1px;background:var(--line);margin:12px auto 0}
+.deck{max-width:56ch;margin:16px auto 0;text-align:center;color:var(--muted);font-size:13.5px}
+
+/* ---------- home ---------- */
+.hero{position:relative;background:var(--ink);color:var(--cream);padding:34px 0 0;flex:1;display:flex;flex-direction:column}
+.hero .eyebrow{color:#9a9186}
+.hero .title{color:var(--cream);font-size:clamp(34px,5.2vw,58px)}
+.hero .kicker{text-align:center;font-size:11px;letter-spacing:.42em;color:var(--sand);margin-top:4px}
+.hero-body{display:grid;grid-template-columns:minmax(220px,1fr) 1.55fr;gap:38px;padding:34px 44px 0;align-items:start}
+.hero-body p{font-family:var(--display);font-size:17px;line-height:1.55;color:#e6e0d4;max-width:34ch}
+.photo{
+  background:linear-gradient(180deg,#3b4650 0%,#6a6f6a 42%,#c9a97a 78%,#8a7458 100%);
+  position:relative;overflow:hidden;min-height:260px;
+}
+.photo::after{
+  content:"";position:absolute;inset:0;
+  background:
+    linear-gradient(115deg,rgba(255,255,255,.14) 0 22%,transparent 22.5%),
+    linear-gradient(0deg,rgba(20,18,16,.55),transparent 55%),
+    repeating-linear-gradient(90deg,rgba(255,255,255,.07) 0 2px,transparent 2px 46px);
+}
+.photo.warm{background:linear-gradient(180deg,#2b2b2c 0%,#5a5148 45%,#c2a37a 100%)}
+.photo.dusk{background:linear-gradient(200deg,#1e2429 0%,#4c4a45 50%,#b8905f 100%)}
+.photo.stone{background:linear-gradient(180deg,#8e8b84 0%,#5f5c56 60%,#2f2d2a 100%)}
+
+.pillars{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border-top:1px solid #3a352e;margin-top:30px}
+.pillar{padding:26px 30px;border-right:1px solid #3a352e}
+.pillar:last-child{border-right:0}
+.pillar h3{font-family:var(--display);font-size:24px;letter-spacing:.2em;margin:0 0 10px;font-weight:400;color:var(--cream)}
+.pillar p{font-size:11.5px;color:#a49b8e;margin:0;line-height:1.75}
+.band{background:var(--sand-2);color:var(--ink-soft);text-align:center;padding:16px 40px;font-size:11.5px;line-height:1.9}
+.tail{background:var(--cream);text-align:center;padding:22px 20px 26px}
+.tail p{margin:0 0 14px;font-size:12px;color:var(--muted)}
+.link{font-size:10.5px;letter-spacing:.24em;border-bottom:1px solid var(--line);padding-bottom:4px}
+
+/* ---------- philosophy ---------- */
+.phil{display:grid;grid-template-columns:1.15fr 1fr;gap:46px;padding:26px 52px 0}
+.phil p{margin:0 0 16px;font-size:12.5px;color:var(--muted);max-width:60ch}
+.qa{border-bottom:1px solid var(--line);padding:0 0 20px;margin:0 0 20px;display:grid;grid-template-columns:60px 1fr;gap:18px;align-items:start}
+.qa:last-child{border-bottom:0}
+.qa h3{font-family:var(--body);font-weight:400;letter-spacing:.2em;font-size:12px;margin:0 0 8px;color:var(--ink)}
+.qa p{font-size:11.5px;margin:0}
+.orb{width:52px;height:52px;border:1px solid var(--line);border-radius:50%;display:grid;place-items:center}
+.orb svg{width:24px;height:24px;stroke:var(--ink-soft);fill:none;stroke-width:1.1}
+.phil-photo{height:190px;margin-top:26px}
+
+/* ---------- values ---------- */
+.values{display:grid;grid-template-columns:repeat(3,1fr);gap:0;padding:40px 60px 0;text-align:center}
+.value{padding:0 26px;border-right:1px solid var(--line)}
+.value:last-child{border-right:0}
+.value .orb{margin:0 auto 20px;width:64px;height:64px}
+.value h3{font-family:var(--display);font-size:26px;letter-spacing:.22em;margin:0;font-weight:400}
+.value .role{font-size:9.5px;letter-spacing:.24em;color:var(--muted);margin:4px 0 16px}
+.value p{font-size:11.5px;color:var(--muted);margin:0}
+.closer{font-family:var(--display);font-size:22px;line-height:1.5;text-align:center;padding:34px 20px 30px;margin:34px 60px 0;border-top:1px solid var(--line)}
+
+/* ---------- offerings ---------- */
+.grid6{display:grid;grid-template-columns:repeat(3,1fr);padding:34px 60px 0}
+.svc{padding:24px 26px;border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
+.svc:nth-child(3n){border-right:0}
+.svc:nth-child(n+4){border-bottom:0}
+.svc svg{width:26px;height:26px;stroke:var(--ink-soft);fill:none;stroke-width:1.1;margin-bottom:16px}
+.svc h3{font-family:var(--body);font-weight:400;font-size:12px;letter-spacing:.14em;margin:0 0 10px;color:var(--ink)}
+.svc p{font-size:11.5px;color:var(--muted);margin:0}
+.note{display:flex;gap:18px;align-items:center;background:var(--cream-2);margin:auto 0 0;padding:22px 60px}
+.note p{margin:0 0 8px;font-size:12px;color:var(--muted)}
+
+/* ---------- journal ---------- */
+.filters{display:flex;justify-content:center;gap:0;margin:26px 0 26px;font-size:9.5px;letter-spacing:.2em;color:var(--muted)}
+.filters button{padding:0 18px;border-right:1px solid var(--line)}
+.filters button:last-child{border-right:0}
+.filters button[aria-pressed="true"]{color:var(--ink)}
+.posts{display:grid;grid-template-columns:repeat(3,1fr);gap:26px;padding:0 60px}
+.post .photo{height:130px}
+.post .cat{display:inline-block;border:1px solid var(--line);font-size:8px;letter-spacing:.2em;padding:4px 9px;margin:14px 0 10px;color:var(--muted)}
+.post h3{font-family:var(--display);font-size:19px;line-height:1.3;margin:0 0 8px;font-weight:500}
+.post p{font-size:11.5px;color:var(--muted);margin:0 0 12px}
+.post time{font-size:9px;letter-spacing:.18em;color:var(--muted)}
+.center-cta{text-align:center;padding:34px 0}
+.btn-sand{background:var(--sand-2);padding:13px 30px;font-size:10px;letter-spacing:.24em}
+
+/* ---------- contact ---------- */
+.contact{display:grid;grid-template-columns:1fr 300px;flex:1}
+.contact-inner{padding:34px 44px}
+.contact h2{font-family:var(--body);font-weight:400;font-size:13px;letter-spacing:.12em;text-align:center;margin:0 0 14px}
+.contact-cols{display:grid;grid-template-columns:1fr 1.25fr;gap:34px;margin-top:34px}
+.info li{list-style:none;display:flex;gap:12px;margin-bottom:20px;font-size:11.5px;color:var(--muted)}
+.info{padding:0;margin:0}
+.info svg{width:16px;height:16px;stroke:var(--ink-soft);fill:none;stroke-width:1.1;flex:0 0 16px;margin-top:2px}
+.form{display:grid;gap:10px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+input,textarea{
+  width:100%;background:transparent;border:1px solid var(--line);
+  padding:11px 12px;font:inherit;font-size:11px;letter-spacing:.12em;color:var(--text);
+}
+textarea{min-height:150px;resize:vertical}
+::placeholder{color:#8b8375;letter-spacing:.16em;font-size:10px}
+.btn-dark{background:var(--ink);color:var(--cream);padding:14px;font-size:10px;letter-spacing:.24em;width:100%}
+.inquiry{background:var(--sand);padding:20px;margin-top:26px;max-width:230px}
+.inquiry h3{font-family:var(--body);font-weight:400;font-size:9.5px;letter-spacing:.2em;margin:0 0 10px}
+.inquiry p{font-size:10.5px;margin:0 0 14px;color:#4a4238}
+
+/* ---------- footer ---------- */
+.foot{background:var(--ink);color:#8d8579;font-size:8px;letter-spacing:.16em;text-align:center;padding:12px}
+.foot span{margin:0 12px;color:#4a453d}
+
+/* ---------- responsive ---------- */
+@media (max-width:900px){
+  :root{--rail:0px}
+  .shell{flex-direction:column}
+  .rail{width:100%;height:auto;position:static;flex-direction:row;flex-wrap:wrap;
+    justify-content:space-between;padding:14px 16px;gap:12px}
+  .tabs{margin:0;display:flex;flex-direction:row;width:auto;height:auto;
+    flex-wrap:wrap;align-items:center;gap:6px;position:static}
+  .tab{position:static;top:auto!important;left:auto;writing-mode:horizontal-tb;
+    transform:none;width:auto;height:auto;padding:8px 12px;
+    border:1px solid #b9a888;border-bottom:0;border-radius:6px 6px 0 0;box-shadow:none}
+  .tab:hover,.tab[aria-selected="true"]{transform:none}
+  .page.turn-out{position:absolute}
+  .rail-foot{display:none}
+  .hero-body,.phil,.contact,.contact-cols{grid-template-columns:1fr;padding-left:22px;padding-right:22px;gap:24px}
+  .pillars,.values,.grid6,.posts{grid-template-columns:1fr;padding-left:22px;padding-right:22px}
+  .pillar,.value,.svc{border-right:0;border-bottom:1px solid var(--line)}
+  .pillar{border-bottom-color:#3a352e}
+  .closer{margin:24px 22px 0;font-size:19px}
+  .note{padding:22px}
+  .contact-inner{padding:22px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- ============ LEFT RAIL ============ -->
+  <nav class="rail" aria-label="Primary">
+    <a class="mark" href="#" data-go="home">
+      <span class="glyph">K</span>
+      <span class="name">KUTAK</span>
+      <span class="sub">DEVELOPMENT</span>
+    </a>
+
+    <div class="tabs" role="tablist" aria-orientation="vertical">
+      <button class="tab" role="tab" aria-selected="true"  data-go="home">HOME</button>
+      <button class="tab" role="tab" aria-selected="false" data-go="philosophy">PHILOSOPHY</button>
+      <button class="tab" role="tab" aria-selected="false" data-go="offerings">OFFERINGS</button>
+      <button class="tab" role="tab" aria-selected="false" data-go="journal">JOURNAL</button>
+      <button class="tab" role="tab" aria-selected="false" data-go="contact">CONTACT</button>
+    </div>
+
+    <div class="rail-foot">
+      <span class="pin">◎</span>
+      PO BOX 99584<br>MARKET CROSSING<br>BURNABY, BC&nbsp; V5J 0H7
+      <br><br>
+      <a href="mailto:info@kutakdevelopment.com">info@kutakdevelopment.com</a>
+      <a class="tel" href="tel:6046708845">604.670.8845</a>
+    </div>
+  </nav>
+
+  <!-- ============ STAGE ============ -->
+  <main class="stage">
+
+    <!-- ---------- HOME ---------- -->
+    <section class="page is-on" id="home">
+      <div class="hero">
+        <p class="eyebrow">INTELLIGENT <span>|</span> PERSONAL</p>
+        <h1 class="title">KUTAK</h1>
+        <p class="kicker">DEVELOPMENT</p>
+
+        <div class="hero-body">
+          <p>We're solution-driven real estate builders who create lasting value and legacy through innovative, well-planned execution — always with a clear business plan and a focus on building a true sanctuary. The result is homes and buildings that feel exceptional today and hold up beautifully over time.</p>
+          <div class="photo dusk" role="img" aria-label="Hillside residence at dusk with pool and city view"></div>
+        </div>
+
+        <div class="pillars">
+          <div class="pillar">
+            <h3>ME</h3>
+            <p><strong style="font-weight:400;color:#cfc6b7">KUTAK MEMBERSHIP</strong><br>Access to information.</p>
+          </div>
+          <div class="pillar">
+            <h3>KIS</h3>
+            <p><strong style="font-weight:400;color:#cfc6b7">KUTAK INTELLIGENT SYSTEMS</strong><br>Business plan, cashflow, statistics and reports.</p>
+          </div>
+          <div class="pillar">
+            <h3>XP</h3>
+            <p><strong style="font-weight:400;color:#cfc6b7">KUTAK EXPERIENCE</strong><br>Home customization and selection; a tailored program that takes you from selection to move-in.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="band">
+        We create a unique system that combines ME, KIS and XP to drive a project forward.<br>
+        Each offers its own benefit, but it's their synergy that shifts the paradigm of home building.
+      </div>
+
+      <div class="tail">
+        <p>We have our own projects, and we assist others through our consultancy services.</p>
+        <a class="link" href="#" data-go="offerings">EXPLORE OUR CAPABILITIES</a>
+      </div>
+      <div class="foot">© 2026 KUTAK DEVELOPMENT SERVICES LTD <span>|</span> PRIVACY POLICY <span>|</span> TERMS OF USE</div>
+    </section>
+
+    <!-- ---------- PHILOSOPHY ---------- -->
+    <section class="page" id="philosophy">
+      <p class="eyebrow">INTELLIGENT <span>|</span> PERSONAL</p>
+      <h2 class="title">PHILOSOPHY</h2>
+
+      <div class="phil">
+        <div>
+          <p>We're a real estate builder focused on creating value that endures and legacy that lasts. Our work is solution-driven — we start with the real needs of people and the real constraints of the site, schedule and budget, then design a practical path to a better outcome.</p>
+          <p>Every project is guided by a clear business plan, with disciplined assumptions and measurable milestones that protect the integrity of the build. The experience we build toward is a sanctuary — a place that feels calm, safe and thoughtfully crafted, from the first impression to day-to-day living.</p>
+          <p>We don't just construct spaces. We deliver well-executed communities and homes designed to age gracefully, perform reliably, and remain meaningful for years to come.</p>
+          <div class="photo warm phil-photo" role="img" aria-label="Living room opening onto a mountain view"></div>
+        </div>
+
+        <div>
+          <div class="qa">
+            <span class="orb"><svg viewBox="0 0 24 24"><path d="M2 19l7-13 4 7 3-4 6 10z"/><circle cx="17" cy="6" r="2"/></svg></span>
+            <div><h3>WHY</h3><p>We build for lasting value and legacy, so people can come home to a sanctuary that's calm, well-made and meaningful for years.</p></div>
+          </div>
+          <div class="qa">
+            <span class="orb"><svg viewBox="0 0 24 24"><path d="M12 3v4M8 21l4-14 4 14M9 15h6"/></svg></span>
+            <div><h3>HOW</h3><p>We're solution-driven and execution-focused. We follow a clear business plan, apply innovation in practical ways, and translate real constraints into smart decisions that protect quality.</p></div>
+          </div>
+          <div class="qa">
+            <span class="orb"><svg viewBox="0 0 24 24"><path d="M4 21V8l6-4 6 4v13M8 21v-5h4v5M8 11h1M12 11h1"/><path d="M16 21V12h4v9"/></svg></span>
+            <div><h3>WHAT</h3><p>We deliver well-built real estate — homes and communities that feel like a sanctuary, with reliable performance and enduring design.</p></div>
+          </div>
+        </div>
+      </div>
+
+      <h2 class="title" style="font-size:clamp(26px,3.6vw,40px);margin-top:52px">OUR KEY VALUES</h2>
+      <div class="values">
+        <div class="value">
+          <span class="orb"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.2"/><path d="M3 19c0-3.3 2.7-5 6-5s6 1.7 6 5M16 14c3 .3 5 2 5 5"/></svg></span>
+          <h3>ME</h3>
+          <p class="role">MEMBERSHIP</p>
+          <p>Access to curated information, insider knowledge and developer insights that empower you to make confident decisions.</p>
+        </div>
+        <div class="value">
+          <span class="orb"><svg viewBox="0 0 24 24"><path d="M4 20V4M4 20h16M8 16V11M12 16V7M16 16v-6M20 16V5"/></svg></span>
+          <h3>KIS</h3>
+          <p class="role">INTELLIGENT SYSTEMS</p>
+          <p>Business planning, cashflow modeling, statistics and reports that give clarity, control and a data-driven edge.</p>
+        </div>
+        <div class="value">
+          <span class="orb"><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7M6 10v10h12V10M10 20v-6h4v6"/></svg></span>
+          <h3>XP</h3>
+          <p class="role">EXPERIENCE</p>
+          <p>A personalized journey from home selection to move-in, with customization options and expert guidance at every step.</p>
+        </div>
+      </div>
+
+      <p class="closer">ME, KIS and XP — working together<br>to shift the paradigm of home building.</p>
+
+      <div class="photo stone" style="height:170px;margin-top:26px" role="img" aria-label="Stone terrace with fire feature at night"></div>
+      <div class="foot">© 2026 KUTAK DEVELOPMENT SERVICES LTD <span>|</span> PRIVACY POLICY <span>|</span> TERMS OF USE</div>
+    </section>
+
+    <!-- ---------- OFFERINGS ---------- -->
+    <section class="page" id="offerings">
+      <p class="eyebrow">INTELLIGENT <span>|</span> PERSONAL</p>
+      <h2 class="title">OUR OFFERINGS</h2>
+      <p class="deck">From concept to completion — and beyond — we offer a full spectrum of development and consulting services tailored to each client and project.</p>
+
+      <div class="grid6">
+        <div class="svc">
+          <svg viewBox="0 0 24 24"><path d="M4 21V6h8v15M12 21V10h8v11M7 10h2M7 14h2M7 18h2M15 14h2M15 18h2"/></svg>
+          <h3>DEVELOPMENT</h3>
+          <p>End-to-end development services with a focus on value, quality and long-term performance.</p>
+        </div>
+        <div class="svc">
+          <svg viewBox="0 0 24 24"><path d="M4 20h16M6 20V7l10 3M6 7l6-3 4 6M9 20v-5h4v5"/></svg>
+          <h3>CONSTRUCTION MANAGEMENT</h3>
+          <p>Expert management of the building process with disciplined oversight and clear communication.</p>
+        </div>
+        <div class="svc">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="2.4"/><path d="M8 21l2-8h4l2 8M6 12l6-3 6 3"/></svg>
+          <h3>PROJECT CONSULTING</h3>
+          <p>Strategic advice and feasibility analysis to help you move forward with confidence.</p>
+        </div>
+        <div class="svc">
+          <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16"/><path d="M4 4l16 16M20 4L4 20"/></svg>
+          <h3>FEASIBILITY &amp; PLANNING</h3>
+          <p>Smarter planning and data-driven analysis to inform better decisions early on.</p>
+        </div>
+        <div class="svc">
+          <svg viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 00-3.5 10.9V16h7v-2.1A6 6 0 0012 3z"/></svg>
+          <h3>DESIGN &amp; CUSTOMIZATION</h3>
+          <p>Collaboration with top design partners and options that reflect your vision and lifestyle.</p>
+        </div>
+        <div class="svc">
+          <svg viewBox="0 0 24 24"><path d="M12 3l7 4v6c0 4-3 6.7-7 8-4-1.3-7-4-7-8V7z"/><path d="M9 12l2 2 4-4"/></svg>
+          <h3>OWNER REPRESENTATION</h3>
+          <p>We act in your best interest, protecting value and aligning the team with your goals.</p>
+        </div>
+      </div>
+
+      <div class="note">
+        <span class="orb"><svg viewBox="0 0 24 24" style="width:24px;height:24px;stroke:var(--ink-soft);fill:none;stroke-width:1.1"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.2"/><path d="M3 19c0-3.3 2.7-5 6-5s6 1.7 6 5M16 14c3 .3 5 2 5 5"/></svg></span>
+        <div>
+          <p>We also provide consulting services for landowners, investors and developers at every stage of the journey.</p>
+          <a class="link" href="#" data-go="contact">START A CONVERSATION</a>
+        </div>
+      </div>
+      <div class="foot">© 2026 KUTAK DEVELOPMENT SERVICES LTD <span>|</span> PRIVACY POLICY <span>|</span> TERMS OF USE</div>
+    </section>
+
+    <!-- ---------- JOURNAL ---------- -->
+    <section class="page" id="journal">
+      <p class="eyebrow">INTELLIGENT <span>|</span> PERSONAL</p>
+      <h2 class="title">JOURNAL</h2>
+      <p class="deck" style="letter-spacing:.16em;font-size:11px">INSIGHTS. INSPIRATION. INTELLIGENT PERSPECTIVES.</p>
+      <p class="deck" style="margin-top:8px">Thoughts on development, design, construction and creating places that matter.</p>
+
+      <div class="filters" role="group" aria-label="Filter articles">
+        <button aria-pressed="true" data-filter="all">ALL</button>
+        <button aria-pressed="false" data-filter="development">DEVELOPMENT</button>
+        <button aria-pressed="false" data-filter="design">DESIGN</button>
+        <button aria-pressed="false" data-filter="construction">CONSTRUCTION</button>
+        <button aria-pressed="false" data-filter="insights">INSIGHTS</button>
+      </div>
+
+      <div class="posts">
+        <article class="post" data-cat="development">
+          <div class="photo warm" role="img" aria-label="Interior with double-height windows"></div>
+          <span class="cat">DEVELOPMENT</span>
+          <h3>The Power of a Clear Business Plan</h3>
+          <p>Why disciplined planning is the foundation of every successful project.</p>
+          <time datetime="2026-05-01">MAY 1, 2026</time>
+        </article>
+        <article class="post" data-cat="design">
+          <div class="photo dusk" role="img" aria-label="Poolside elevation at sunset"></div>
+          <span class="cat">DESIGN</span>
+          <h3>Designing for Enduring Value</h3>
+          <p>Good design isn't just beautiful today — it performs better for years to come.</p>
+          <time datetime="2026-04-17">APRIL 17, 2026</time>
+        </article>
+        <article class="post" data-cat="insights">
+          <div class="photo stone" role="img" aria-label="Covered terrace with lounge seating"></div>
+          <span class="cat">INSIGHTS</span>
+          <h3>Building a True Sanctuary</h3>
+          <p>What it means to create homes and communities that support well-being.</p>
+          <time datetime="2026-04-02">APRIL 2, 2026</time>
+        </article>
+      </div>
+
+      <div class="center-cta"><button class="btn-sand">VIEW ALL ARTICLES</button></div>
+      <div class="foot" style="margin-top:auto">© 2026 KUTAK DEVELOPMENT SERVICES LTD <span>|</span> PRIVACY POLICY <span>|</span> TERMS OF USE</div>
+    </section>
+
+    <!-- ---------- CONTACT ---------- -->
+    <section class="page" id="contact">
+      <div class="contact">
+        <div class="contact-inner">
+          <p class="eyebrow" style="text-align:center;padding-top:0">INTELLIGENT <span>|</span> PERSONAL</p>
+          <h2 style="margin-top:26px">LET'S BUILD SOMETHING EXCEPTIONAL TOGETHER.</h2>
+          <p class="deck" style="margin-top:0">We welcome new opportunities and collaborations. Reach out to start the conversation.</p>
+
+          <div class="contact-cols">
+            <div>
+              <ul class="info">
+                <li><svg viewBox="0 0 24 24"><path d="M12 21s7-6.3 7-11a7 7 0 10-14 0c0 4.7 7 11 7 11z"/><circle cx="12" cy="10" r="2.4"/></svg>
+                  <span>PO BOX 99584<br>MARKET CROSSING<br>BURNABY, BC&nbsp; V5J 0H7</span></li>
+                <li><svg viewBox="0 0 24 24"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 005 5L15 13l5 2v4a1 1 0 01-1 1A16 16 0 014 5a1 1 0 011-1z"/></svg>
+                  <a href="tel:6046708845">604.670.8845</a></li>
+                <li><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14"/><path d="M3 6l9 7 9-7"/></svg>
+                  <a href="mailto:info@kutakdevelopment.com">info@kutakdevelopment.com</a></li>
+              </ul>
+
+              <div class="inquiry">
+                <h3>CONSULTING INQUIRIES</h3>
+                <p>We often assist landowners, investors and developers through our consulting services.</p>
+                <a class="link" href="#" data-go="offerings">SEE WHAT WE OFFER</a>
+              </div>
+            </div>
+
+            <div class="form">
+              <div class="row2">
+                <input type="text" placeholder="NAME" aria-label="Name">
+                <input type="email" placeholder="EMAIL" aria-label="Email">
+              </div>
+              <input type="tel" placeholder="PHONE" aria-label="Phone">
+              <textarea placeholder="MESSAGE" aria-label="Message"></textarea>
+              <button class="btn-dark" id="send">SEND MESSAGE</button>
+              <p id="formNote" style="font-size:10.5px;color:var(--muted);margin:0" role="status"></p>
+            </div>
+          </div>
+        </div>
+        <div class="photo stone" role="img" aria-label="Entrance canopy of a modern residence"></div>
+      </div>
+      <div class="foot">© 2026 KUTAK DEVELOPMENT SERVICES LTD <span>|</span> PRIVACY POLICY <span>|</span> TERMS OF USE</div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+(function(){
+  var pages = document.querySelectorAll('.page');
+  var tabs  = document.querySelectorAll('.tab');
+
+  var busy = false;
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function go(id){
+    var next = document.getElementById(id);
+    var cur  = document.querySelector('.page.is-on');
+    if(!next || busy || cur === next) return;
+
+    tabs.forEach(function(t){ t.setAttribute('aria-selected', String(t.dataset.go === id)); });
+
+    if(reduce){
+      pages.forEach(function(p){ p.classList.toggle('is-on', p === next); });
+      window.scrollTo({top:0});
+      return;
+    }
+
+    busy = true;
+    window.scrollTo({top:0});
+    cur.classList.add('turn-out');
+    next.classList.add('is-on','turn-in');
+
+    setTimeout(function(){
+      cur.classList.remove('turn-out','is-on');
+      next.classList.remove('turn-in');
+      busy = false;
+    }, 520);
+  }
+
+  document.querySelectorAll('[data-go]').forEach(function(el){
+    el.addEventListener('click', function(e){ e.preventDefault(); go(el.dataset.go); });
+  });
+
+  // Journal filters
+  var filters = document.querySelectorAll('.filters button');
+  filters.forEach(function(b){
+    b.addEventListener('click', function(){
+      filters.forEach(function(x){ x.setAttribute('aria-pressed','false'); });
+      b.setAttribute('aria-pressed','true');
+      var f = b.dataset.filter;
+      document.querySelectorAll('.post').forEach(function(p){
+        p.style.display = (f === 'all' || p.dataset.cat === f) ? '' : 'none';
+      });
+    });
+  });
+
+  // Contact form (front-end only — wire to your endpoint)
+  var send = document.getElementById('send');
+  if(send){
+    send.addEventListener('click', function(){
+      var f = document.querySelector('.form');
+      var name  = f.querySelector('input[type=text]').value.trim();
+      var email = f.querySelector('input[type=email]').value.trim();
+      var note  = document.getElementById('formNote');
+      if(!name || !email){ note.textContent = 'Add your name and email so we can reply.'; return; }
+      note.textContent = 'Message sent. We\u2019ll be in touch shortly.';
+    });
+  }
+})();
+</script>
+</body>
+</html>
